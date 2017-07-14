@@ -14,6 +14,10 @@ const (
 
 // Colors
 
+// F32RGBA is an RGBA color where every channel is
+// represented by a float32.
+//
+// The accepted color range is between -1.0 and 1.0
 type F32RGBA struct {
 	R, G, B, A float32
 }
@@ -26,6 +30,10 @@ func (c F32RGBA) RGBA() (r, g, b, a uint32) {
 		uint32(((c.A + 1) * 0.5) * f32conv)
 }
 
+// F64RGBA is an RGBA color where every channel is
+// represented by a float64.
+//
+// The accepted color range is between -1.0 and 1.0
 type F64RGBA struct {
 	R, G, B, A float64
 }
@@ -38,6 +46,8 @@ func (c F64RGBA) RGBA() (r, g, b, a uint32) {
 		uint32(((c.A + 1) * 0.5) * f64conv)
 }
 
+// C64RGBA is an RGBA color where every channel is
+// represented by a complex64.
 type C64RGBA struct {
 	R, G, B, A complex64
 	Imag       bool
@@ -45,18 +55,14 @@ type C64RGBA struct {
 
 // RGBA implements image/color.Color
 func (c C64RGBA) RGBA() (r, g, b, a uint32) {
-	if c.Imag {
-		return uint32(f32conv * imag(c.R)),
-			uint32(f32conv * imag(c.G)),
-			uint32(f32conv * imag(c.B)),
-			uint32(f32conv * imag(c.A))
-	}
 	return uint32(f32conv * real(c.R)),
 		uint32(f32conv * real(c.G)),
 		uint32(f32conv * real(c.B)),
 		uint32(f32conv * real(c.A))
 }
 
+// C128RGBA is an RGBA color where every channel is
+// represented by a complex128.
 type C128RGBA struct {
 	R, G, B, A complex128
 	Imag       bool
@@ -82,11 +88,124 @@ var _ color.Color = C64RGBA{}
 var _ color.Color = C128RGBA{}
 
 var (
-	F32RGBAModel  color.Model = color.ModelFunc(f32rgbaModel)
-	F64RGBAModel  color.Model = color.ModelFunc(f64rgbaModel)
-	C64RGBAModel  color.Model = color.ModelFunc(c64rgbaModel)
-	C128RGBAModel color.Model = color.ModelFunc(c128rgbaModel)
+	// F32RGBAModel is a color.Model that will translate any given color
+	// into the range of [0, 1]
+	//
+	// Any floating point number color model defined within this package will
+	// be maintained for values below 0
+	F32RGBAModel = color.ModelFunc(f32rgbaModel)
+
+	// F64RGBAModel is a color.Model that will translate any given color
+	// into the range of [0, 1]
+	//
+	// Any floating point number color model defined within this package will
+	// be maintained for values below 0
+	F64RGBAModel = color.ModelFunc(f64rgbaModel)
+
+	// C64RGBAModel is a color.Model that will translate any given color
+	// into the range of [0, 1] in only the real components
+	//
+	// Any floating point number color model defined within this package will
+	// be maintained for values below 0
+	C64RGBAModel = color.ModelFunc(c64rgbaModel)
+
+	// C128RGBAModel is a color.Model that will translate any given color
+	// into the range of [0, 1] in only the real components
+	//
+	// Any floating point number color model defined within this package will
+	// be maintained for values below 0
+	C128RGBAModel = color.ModelFunc(c128rgbaModel)
+
+	// RealRGBAModel is a color.Model that will convert floating point colors
+	// in the real number domain to an NRGBA color.
+	//
+	// This translates the range of [0, 1] to [0, 255]
+	RealRGBAModel = color.ModelFunc(clampRealColor)
+
+	// ComplexRGBAModel is a color.Model that will convert floating point colors
+	// in the imaginary number domain to an NRGBA color.
+	//
+	// This translates the range of [0, 1] to [0, 255]
+	ComplexRGBAModel = color.ModelFunc(clampComplexColor)
 )
+
+func f32ToUint8(v float32) uint8 {
+	if v < 0 {
+		return 0
+	}
+
+	return uint8(v * f32conv)
+}
+
+func f64ToUint8(v float64) uint8 {
+	if v < 0 {
+		return 0
+	}
+
+	return uint8(v * f64conv)
+}
+
+// clampRealColor converts channels from the range [0, 1] to [0, 255]
+func clampRealColor(c color.Color) color.Color {
+	switch t := c.(type) {
+	case F32RGBA:
+		return color.NRGBA{
+			R: f32ToUint8(t.R),
+			G: f32ToUint8(t.G),
+			B: f32ToUint8(t.B),
+			A: f32ToUint8(t.A),
+		}
+	case F64RGBA:
+		return color.NRGBA{
+			R: f64ToUint8(t.R),
+			G: f64ToUint8(t.G),
+			B: f64ToUint8(t.B),
+			A: f64ToUint8(t.A),
+		}
+	case C64RGBA:
+		return color.NRGBA{
+			R: f32ToUint8(real(t.R)),
+			G: f32ToUint8(real(t.G)),
+			B: f32ToUint8(real(t.B)),
+			A: f32ToUint8(real(t.A)),
+		}
+	case C128RGBA:
+		return color.NRGBA{
+			R: f64ToUint8(real(t.R)),
+			G: f64ToUint8(real(t.G)),
+			B: f64ToUint8(real(t.B)),
+			A: f64ToUint8(real(t.A)),
+		}
+
+	default:
+		return color.NRGBAModel.Convert(c)
+	}
+}
+
+func clampComplexColor(c color.Color) color.Color {
+	switch t := c.(type) {
+	case F32RGBA, F64RGBA:
+		return color.NRGBA{}
+
+	case C64RGBA:
+		return color.NRGBA{
+			R: f32ToUint8(imag(t.R)),
+			G: f32ToUint8(imag(t.G)),
+			B: f32ToUint8(imag(t.B)),
+			A: f32ToUint8(imag(t.A)),
+		}
+	case C128RGBA:
+		return color.NRGBA{
+			R: f64ToUint8(imag(t.R)),
+			G: f64ToUint8(imag(t.G)),
+			B: f64ToUint8(imag(t.B)),
+			A: f64ToUint8(imag(t.A)),
+		}
+
+	default:
+		return color.NRGBAModel.Convert(c)
+	}
+}
 
 func f32rgbaModel(c color.Color) color.Color {
 	r, g, b, a := c.RGBA()
