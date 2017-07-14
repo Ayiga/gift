@@ -4,6 +4,8 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+
+	giftimage "github.com/disintegration/gift/image"
 )
 
 type pixel struct {
@@ -22,6 +24,11 @@ const (
 	itGray
 	itGray16
 	itPaletted
+
+	itF32RGBA
+	itF64RGBA
+	itC64RGBA
+	itC128RGBA
 )
 
 type pixelGetter struct {
@@ -36,6 +43,10 @@ type pixelGetter struct {
 	imgGray     *image.Gray
 	imgGray16   *image.Gray16
 	imgPaletted *image.Paletted
+	imgF32RGBA  *giftimage.F32RGBA
+	imgF64RGBA  *giftimage.F64RGBA
+	imgC64RGBA  *giftimage.C64RGBA
+	imgC128RGBA *giftimage.C128RGBA
 	imgPalette  []pixel
 }
 
@@ -96,6 +107,34 @@ func newPixelGetter(img image.Image) (p *pixelGetter) {
 			imgBounds:   img.Bounds(),
 			imgPaletted: img,
 			imgPalette:  convertPalette(img.Palette),
+		}
+
+	case *giftimage.F32RGBA:
+		p = &pixelGetter{
+			imgType:    itF32RGBA,
+			imgBounds:  img.Bounds(),
+			imgF32RGBA: img,
+		}
+
+	case *giftimage.F64RGBA:
+		p = &pixelGetter{
+			imgType:    itF64RGBA,
+			imgBounds:  img.Bounds(),
+			imgF64RGBA: img,
+		}
+
+	case *giftimage.C64RGBA:
+		p = &pixelGetter{
+			imgType:    itC64RGBA,
+			imgBounds:  img.Bounds(),
+			imgC64RGBA: img,
+		}
+
+	case *giftimage.C128RGBA:
+		p = &pixelGetter{
+			imgType:     itC128RGBA,
+			imgBounds:   img.Bounds(),
+			imgC128RGBA: img,
 		}
 		return
 
@@ -266,6 +305,38 @@ func (p *pixelGetter) getPixel(x, y int) (px pixel) {
 		k := p.imgPaletted.Pix[i]
 		px = p.imgPalette[k]
 
+	case itF32RGBA:
+		i := p.imgF32RGBA.PixOffset(x, y)
+		r := p.imgF32RGBA.Pix[i+0]
+		g := p.imgF32RGBA.Pix[i+1]
+		b := p.imgF32RGBA.Pix[i+2]
+		a := p.imgF32RGBA.Pix[i+3]
+		px = pixel{r, g, b, a}
+
+	case itF64RGBA:
+		i := p.imgF64RGBA.PixOffset(x, y)
+		r := float32(p.imgF64RGBA.Pix[i+0])
+		g := float32(p.imgF64RGBA.Pix[i+1])
+		b := float32(p.imgF64RGBA.Pix[i+2])
+		a := float32(p.imgF64RGBA.Pix[i+3])
+		px = pixel{r, g, b, a}
+
+	case itC64RGBA:
+		i := p.imgC64RGBA.PixOffset(x, y)
+		r := real(p.imgC64RGBA.Pix[i+0])
+		g := real(p.imgC64RGBA.Pix[i+1])
+		b := real(p.imgC64RGBA.Pix[i+2])
+		a := real(p.imgC64RGBA.Pix[i+3])
+		px = pixel{r, g, b, a}
+
+	case itC128RGBA:
+		i := p.imgC128RGBA.PixOffset(x, y)
+		r := float32(real(p.imgC128RGBA.Pix[i+0]))
+		g := float32(real(p.imgC128RGBA.Pix[i+1]))
+		b := float32(real(p.imgC128RGBA.Pix[i+2]))
+		a := float32(real(p.imgC128RGBA.Pix[i+3]))
+		px = pixel{r, g, b, a}
+
 	case itGeneric:
 		px = pixelclr(p.imgGeneric.At(x, y))
 	}
@@ -319,6 +390,10 @@ type pixelSetter struct {
 	imgGray     *image.Gray
 	imgGray16   *image.Gray16
 	imgPaletted *image.Paletted
+	imgF32RGBA  *giftimage.F32RGBA
+	imgF64RGBA  *giftimage.F64RGBA
+	imgC64RGBA  *giftimage.C64RGBA
+	imgC128RGBA *giftimage.C128RGBA
 	imgPalette  []pixel
 }
 
@@ -372,6 +447,34 @@ func newPixelSetter(img draw.Image) (p *pixelSetter) {
 			imgBounds:   img.Bounds(),
 			imgPaletted: img,
 			imgPalette:  convertPalette(img.Palette),
+		}
+
+	case *giftimage.F32RGBA:
+		p = &pixelSetter{
+			imgType:    itF32RGBA,
+			imgBounds:  img.Bounds(),
+			imgF32RGBA: img,
+		}
+
+	case *giftimage.F64RGBA:
+		p = &pixelSetter{
+			imgType:    itF64RGBA,
+			imgBounds:  img.Bounds(),
+			imgF64RGBA: img,
+		}
+
+	case *giftimage.C64RGBA:
+		p = &pixelSetter{
+			imgType:    itC64RGBA,
+			imgBounds:  img.Bounds(),
+			imgC64RGBA: img,
+		}
+
+	case *giftimage.C128RGBA:
+		p = &pixelSetter{
+			imgType:     itC128RGBA,
+			imgBounds:   img.Bounds(),
+			imgC128RGBA: img,
 		}
 
 	default:
@@ -455,6 +558,34 @@ func (p *pixelSetter) setPixel(x, y int, px pixel) {
 		i := p.imgPaletted.PixOffset(x, y)
 		k := getPaletteIndex(p.imgPalette, px1)
 		p.imgPaletted.Pix[i] = uint8(k)
+
+	case itF32RGBA:
+		i := p.imgF32RGBA.PixOffset(x, y)
+		p.imgF32RGBA.Pix[i+0] = px.R
+		p.imgF32RGBA.Pix[i+1] = px.G
+		p.imgF32RGBA.Pix[i+2] = px.B
+		p.imgF32RGBA.Pix[i+3] = px.A
+
+	case itF64RGBA:
+		i := p.imgF64RGBA.PixOffset(x, y)
+		p.imgF64RGBA.Pix[i+0] = float64(px.R)
+		p.imgF64RGBA.Pix[i+1] = float64(px.G)
+		p.imgF64RGBA.Pix[i+2] = float64(px.B)
+		p.imgF64RGBA.Pix[i+3] = float64(px.A)
+
+	case itC64RGBA:
+		i := p.imgC64RGBA.PixOffset(x, y)
+		p.imgC64RGBA.Pix[i+0] = complex(px.R, 0)
+		p.imgC64RGBA.Pix[i+1] = complex(px.G, 0)
+		p.imgC64RGBA.Pix[i+2] = complex(px.B, 0)
+		p.imgC64RGBA.Pix[i+3] = complex(px.A, 0)
+
+	case itC128RGBA:
+		i := p.imgC128RGBA.PixOffset(x, y)
+		p.imgC128RGBA.Pix[i+0] = complex(float64(px.R), 0)
+		p.imgC128RGBA.Pix[i+1] = complex(float64(px.G), 0)
+		p.imgC128RGBA.Pix[i+2] = complex(float64(px.B), 0)
+		p.imgC128RGBA.Pix[i+3] = complex(float64(px.A), 0)
 
 	case itGeneric:
 		r16 := f32u16(px.R * 65535)
