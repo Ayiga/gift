@@ -24,10 +24,10 @@ type F32RGBA struct {
 
 // RGBA implements image/color.Color
 func (c F32RGBA) RGBA() (r, g, b, a uint32) {
-	return uint32(((c.R + 1) * 0.5) * f32conv),
-		uint32(((c.G + 1) * 0.5) * f32conv),
-		uint32(((c.B + 1) * 0.5) * f32conv),
-		uint32(((c.A + 1) * 0.5) * f32conv)
+	return uint32(0.5 * f32conv * (c.R + 1)),
+		uint32(0.5 * f32conv * (c.G + 1)),
+		uint32(0.5 * f32conv * (c.B + 1)),
+		uint32(0.5 * f32conv * (c.A + 1))
 }
 
 // F64RGBA is an RGBA color where every channel is
@@ -40,46 +40,38 @@ type F64RGBA struct {
 
 // RGBA implements image/color.Color
 func (c F64RGBA) RGBA() (r, g, b, a uint32) {
-	return uint32(((c.R + 1) * 0.5) * f64conv),
-		uint32(((c.G + 1) * 0.5) * f64conv),
-		uint32(((c.B + 1) * 0.5) * f64conv),
-		uint32(((c.A + 1) * 0.5) * f64conv)
+	return uint32(0.5 * f64conv * (c.R + 1)),
+		uint32(0.5 * f64conv * (c.G + 1)),
+		uint32(0.5 * f64conv * (c.B + 1)),
+		uint32(0.5 * f64conv * (c.A + 1))
 }
 
 // C64RGBA is an RGBA color where every channel is
 // represented by a complex64.
 type C64RGBA struct {
 	R, G, B, A complex64
-	Imag       bool
 }
 
 // RGBA implements image/color.Color
 func (c C64RGBA) RGBA() (r, g, b, a uint32) {
-	return uint32(f32conv * real(c.R)),
-		uint32(f32conv * real(c.G)),
-		uint32(f32conv * real(c.B)),
-		uint32(f32conv * real(c.A))
+	return uint32(f32conv * 0.5 * (real(c.R) + 1)),
+		uint32(f32conv * 0.5 * (real(c.G) + 1)),
+		uint32(f32conv * 0.5 * (real(c.B) + 1)),
+		uint32(f32conv * 0.5 * (real(c.A) + 1))
 }
 
 // C128RGBA is an RGBA color where every channel is
 // represented by a complex128.
 type C128RGBA struct {
 	R, G, B, A complex128
-	Imag       bool
 }
 
 // RGBA implements image/color.Color
 func (c C128RGBA) RGBA() (r, g, b, a uint32) {
-	if c.Imag {
-		return uint32(f64conv * imag(c.R)),
-			uint32(f64conv * imag(c.G)),
-			uint32(f64conv * imag(c.B)),
-			uint32(f64conv * imag(c.A))
-	}
-	return uint32(f64conv * real(c.R)),
-		uint32(f64conv * real(c.G)),
-		uint32(f64conv * real(c.B)),
-		uint32(f64conv * real(c.A))
+	return uint32(f64conv * 0.5 * real(c.R)),
+		uint32(f64conv * 0.5 * real(c.G)),
+		uint32(f64conv * 0.5 * real(c.B)),
+		uint32(f64conv * 0.5 * real(c.A))
 }
 
 var _ color.Color = F32RGBA{}
