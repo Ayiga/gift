@@ -25,7 +25,7 @@ func prepareMorphologyMasks(kernel []float32) (int, []uvweight) {
 				w = kernel[k]
 			}
 			if w != 0 {
-				weights = append(weights, uvweight{u: i - center, v: j - center, weight: 1})
+				weights = append(weights, uvweight{u: i - center, v: j - center, weight: w})
 			}
 		}
 	}
@@ -98,13 +98,26 @@ func (p *morphologyErosion) Draw(dst draw.Image, src image.Image, options *Optio
 					rowsy := kcenter + w.v
 					px := rows[rowsy][rowsx]
 
-					r = minf32(r, px.R)
-					g = minf32(g, px.G)
-					b = minf32(b, px.B)
-					a = minf32(a, px.A)
+					r = minf32(r, px.R*w.weight)
+					g = minf32(g, px.G*w.weight)
+					b = minf32(b, px.B*w.weight)
+					a = minf32(a, px.A*w.weight)
 				}
 
 				pixSetter.setPixel(dstb.Min.X+x-srcb.Min.X, dstb.Min.Y+y-srcb.Min.Y, pixel{r, g, b, a})
+			}
+			// rotate temp rows
+			if y < pmax-1 {
+				tmprow := rows[0]
+				for i := 0; i < ksize-1; i++ {
+					rows[i] = rows[i+1]
+				}
+				nextrowy := y + ksize/2 + 1
+				if nextrowy > srcb.Max.Y-1 {
+					nextrowy = srcb.Max.Y - 1
+				}
+				pixGetter.getPixelRow(nextrowy, &tmprow)
+				rows[ksize-1] = tmprow
 			}
 		}
 	})
@@ -187,6 +200,19 @@ func (p *morphologyDilation) Draw(dst draw.Image, src image.Image, options *Opti
 				}
 
 				pixSetter.setPixel(dstb.Min.X+x-srcb.Min.X, dstb.Min.Y+y-srcb.Min.Y, pixel{r, g, b, a})
+			}
+			// rotate temp rows
+			if y < pmax-1 {
+				tmprow := rows[0]
+				for i := 0; i < ksize-1; i++ {
+					rows[i] = rows[i+1]
+				}
+				nextrowy := y + ksize/2 + 1
+				if nextrowy > srcb.Max.Y-1 {
+					nextrowy = srcb.Max.Y - 1
+				}
+				pixGetter.getPixelRow(nextrowy, &tmprow)
+				rows[ksize-1] = tmprow
 			}
 		}
 	})
